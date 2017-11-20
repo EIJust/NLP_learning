@@ -7,6 +7,8 @@ from pandas import Series
 from keras.preprocessing.text import Tokenizer
 from keras.models import Sequential
 from keras.layers import LSTM
+from keras.layers import Conv1D
+from keras.layers import GlobalMaxPooling1D
 from keras.layers import Dense
 from keras.layers import Embedding
 from keras.layers import Activation
@@ -49,6 +51,8 @@ if __name__ == '__main__':
     # Get dataset
     tp_df, fp_df = get_error_df_from_xlsx('Invalid_Number_Formating(FP tables).xlsx')
 
+    # print(tp_df['Source'][0])
+    # print(tp_df['Source'][3])
     # Encode sequences
     tp_df['Source'] = tp_df['Source'].apply(convert_string_to_sequences)
     tp_df['Target'] = tp_df['Target'].apply(convert_string_to_sequences)
@@ -109,15 +113,28 @@ if __name__ == '__main__':
 
     # Build model
     model = Sequential()
-    model.add(LSTM(1024, input_shape=(x_train.shape[1], x_train.shape[2])))
+    # model.add(LSTM(126, input_shape=(x_train.shape[1], x_train.shape[2])))
+    # model.add(Dense(2))
+    # model.add(Activation('softmax'))
+
+    model.add(Conv1D(filters=256, kernel_size=5, activation='relu', input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(GlobalMaxPooling1D())
+
+    hidden_dims = 256
+    # model.add(Activation('softmax'))
+    model.add(Dense(hidden_dims))
+    model.add(Activation('relu'))
+
+    # We project onto a single unit output layer, and squash it with a sigmoid:
     model.add(Dense(2))
     model.add(Activation('softmax'))
 
-    optimizer = RMSprop(lr=0.01)
-    model.compile(loss='binary_crossentropy', optimizer=optimizer,
+    # optimizer = RMSprop(lr=0.01)
+    model.compile(loss='binary_crossentropy', optimizer='adam',
                   metrics=['accuracy'])
 
-    model.fit(x_train, y_train)
+    model.fit(x_train, y_train, epochs=5)
 
+    # model.save('fp_model.h5')
     model_acc = model.evaluate(x_test, y_test)
-    print("Accuracy: ", model_acc)
+    print("Accuracy: ", model_acc[1])
